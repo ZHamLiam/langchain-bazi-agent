@@ -1,0 +1,11 @@
+# Development Dependencies
+# Include all requirements from requirements.txt
+-r requirements.txt
+
+# Additional Dev Tools
+pre-commit==3.6.0
+ipython==8.19.0
+jupyter==1.0.0
+
+# Type Checking
+types-requests==2.31.0.20240125
