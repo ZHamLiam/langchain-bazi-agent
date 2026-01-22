@@ -83,12 +83,11 @@ class SangcaiWuge:
             return "水"
 
 
-@tool
-def calculate_wuge(
+def _calculate_wuge_internal(
     name: str,
     surname: str = "李"
 ) -> Dict[str, Any]:
-    """计算五格
+    """计算五格（内部函数，不带装饰器）
 
     五格包括：天格、人格、地格、外格、总格
 
@@ -155,8 +154,26 @@ def calculate_wuge(
 
 
 @tool
-def calculate_sancai(wuge_result: Dict[str, Any]) -> Dict[str, Any]:
-    """计算三才
+def calculate_wuge(
+    name: str,
+    surname: str = "李"
+) -> Dict[str, Any]:
+    """计算五格
+
+    五格包括：天格、人格、地格、外格、总格
+
+    Args:
+        name: 名字
+        surname: 姓氏，默认"李"
+
+    Returns:
+        五格计算结果
+    """
+    return _calculate_wuge_internal(name, surname)
+
+
+def _calculate_sancai_internal(wuge_result: Dict[str, Any]) -> Dict[str, Any]:
+    """计算三才（内部函数，不带装饰器）
 
     三才由天格、人格、地格的五行组成
 
@@ -190,6 +207,21 @@ def calculate_sancai(wuge_result: Dict[str, Any]) -> Dict[str, Any]:
 
 
 @tool
+def calculate_sancai(wuge_result: Dict[str, Any]) -> Dict[str, Any]:
+    """计算三才
+
+    三才由天格、人格、地格的五行组成
+
+    Args:
+        wuge_result: 五格计算结果
+
+    Returns:
+        三才计算结果
+    """
+    return _calculate_sancai_internal(wuge_result)
+
+
+@tool
 def analyze_sancai_wuge(
     name: str,
     surname: str = "李"
@@ -203,11 +235,11 @@ def analyze_sancai_wuge(
     Returns:
         综合分析结果
     """
-    # 计算五格
-    wuge = calculate_wuge(name, surname)
+    # 计算五格（使用内部函数）
+    wuge = _calculate_wuge_internal(name, surname)
 
-    # 计算三才
-    sancai = calculate_sancai(wuge)
+    # 计算三才（使用内部函数）
+    sancai = _calculate_sancai_internal(wuge)
 
     # 综合评分
     wuge_scores = [
@@ -290,22 +322,40 @@ def compare_sancai_wuge(name1: str, name2: str, surname: str = "李") -> Dict[st
     Returns:
         比较结果
     """
-    analysis1 = analyze_sancai_wuge(name1, surname)
-    analysis2 = analyze_sancai_wuge(name2, surname)
+    # 使用内部函数计算
+    wuge1 = _calculate_wuge_internal(name1, surname)
+    sancai1 = _calculate_sancai_internal(wuge1)
+    overall_score1 = (sum([
+        wuge1["tian_ge_score"],
+        wuge1["ren_ge_score"],
+        wuge1["di_ge_score"],
+        wuge1["wai_ge_score"],
+        wuge1["zong_ge_score"]
+    ]) / 5) * 0.7 + sancai1["sancai_score"] * 0.3
+
+    wuge2 = _calculate_wuge_internal(name2, surname)
+    sancai2 = _calculate_sancai_internal(wuge2)
+    overall_score2 = (sum([
+        wuge2["tian_ge_score"],
+        wuge2["ren_ge_score"],
+        wuge2["di_ge_score"],
+        wuge2["wai_ge_score"],
+        wuge2["zong_ge_score"]
+    ]) / 5) * 0.7 + sancai2["sancai_score"] * 0.3
 
     return {
         "name1": {
             "name": name1,
-            "overall_score": analysis1["overall_score"],
-            "evaluation": analysis1["evaluation"]
+            "overall_score": round(overall_score1, 1),
+            "evaluation": _get_sancai_wuge_evaluation(overall_score1)
         },
         "name2": {
             "name": name2,
-            "overall_score": analysis2["overall_score"],
-            "evaluation": analysis2["evaluation"]
+            "overall_score": round(overall_score2, 1),
+            "evaluation": _get_sancai_wuge_evaluation(overall_score2)
         },
-        "better": name1 if analysis1["overall_score"] >= analysis2["overall_score"] else name2,
-        "difference": abs(analysis1["overall_score"] - analysis2["overall_score"])
+        "better": name1 if overall_score1 >= overall_score2 else name2,
+        "difference": abs(overall_score1 - overall_score2)
     }
 
 

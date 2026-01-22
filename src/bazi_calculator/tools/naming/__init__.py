@@ -35,10 +35,14 @@ from bazi_calculator.tools.naming.pingze_analysis import (
 )
 from bazi_calculator.tools.naming.stroke_analysis import (
     analyze_name_strokes,
+    check_strokes_luck,
     check_strokes_harmony,
+    check_strokes_comprehensive,
     compare_name_strokes,
     get_strokes_suggestions,
     format_strokes_analysis,
+    format_strokes_luck_analysis,
+    format_strokes_comprehensive_analysis,
     check_multiple_names_strokes,
     get_strokes_by_range,
 )
@@ -94,10 +98,14 @@ __all__ = [
     "get_pingze_pattern_statistics",
     # 笔画分析
     "analyze_name_strokes",
+    "check_strokes_luck",
     "check_strokes_harmony",
+    "check_strokes_comprehensive",
     "compare_name_strokes",
     "get_strokes_suggestions",
     "format_strokes_analysis",
+    "format_strokes_luck_analysis",
+    "format_strokes_comprehensive_analysis",
     "check_multiple_names_strokes",
     "get_strokes_by_range",
     # 三才五格

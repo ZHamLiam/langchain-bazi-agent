@@ -12,17 +12,16 @@ from langchain_openai import ChatOpenAI
 
 @tool
 def generate_name_suggestions(
-    suitable_chars: Dict[str, Any],
     bazi_analysis: Dict[str, Any],
     count: int = 10
 ) -> Dict[str, Any]:
     """生成名字建议
 
-    使用LLM根据八字分析和适合字列表生成10个名字
+    使用LLM根据八字分析直接生成10个名字
     包含单字名和双字名，每个名字都有详细分析
+    完全从大模型生成，不依赖数据库
 
     Args:
-        suitable_chars: 适合字字典
         bazi_analysis: 八字分析结果
         count: 生成名字数量，默认10个
 
@@ -37,19 +36,8 @@ def generate_name_suggestions(
         temperature=0.7
     )
 
-    # 提取适合字
-    suitable_chars_dict = suitable_chars.get("suitable_chars", {})
-
-    # 为每个五行选择几个代表字
-    representative_chars = {}
-    for wuxing, chars in suitable_chars_dict.items():
-        representative_chars[wuxing] = [
-            f"{char_info['char']}({char_info.get('pinyin', '')})"
-            for char_info in chars[:5]
-        ]
-
     # 构建prompt
-    prompt = f"""请根据以下信息生成{count}个适合的名字（单字名和双字名各一半）
+    prompt = f"""请根据以下八字信息生成{count}个适合的名字（单字名和双字名各一半）
 
 【八字信息】
 - 生肖：{bazi_analysis['zodiac']}
@@ -57,17 +45,27 @@ def generate_name_suggestions(
 - 用神：{bazi_analysis['yong_shen']}
 - 喜神：{bazi_analysis['xi_shen']}
 
-【适合字列表】
-{json.dumps(representative_chars, ensure_ascii=False, indent=2)}
-
 【取名要求】
-1. 优先使用用神和喜神的字
+1. 你需要自行选择适合取名的汉字，要求：
+   - 优先选择符合用神和喜神的字
+   - 确保五行属性准确
+   - 康熙笔画要准确（参考康熙字典）
+   - 生肖要相符（适合该生肖的字）
+   - 平仄要准确（一声二声为平，三声四声为仄）
 2. 名字寓意要美好、积极向上
 3. 平仄搭配要和谐
 4. 笔画要适中（5-15画之间）
 5. 出自经典文献优先（如《诗经》、《楚辞》、《论语》等）
 6. 避免生僻字和容易读错的字
 7. 单字名和双字名各一半
+
+【81数理分析要求】
+8. 对每个名字进行81数理分析，包括：
+   - 总笔画数的81数理（1-81）
+   - 81数理吉凶判断（吉/凶/平）
+   - 81数理评分（0-100）
+   - 81数理含义和详细说明
+   - 单个字的81数理分析（如果名字有多个字）
 
 请严格按照以下JSON格式输出：
 [
@@ -79,19 +77,47 @@ def generate_name_suggestions(
         "wuxing": {{"字1": "五行", "字2": "五行"}},
         "pingze": {{"字1": "平/仄", "字2": "平/仄"}},
         "strokes": {{"字1": 笔画, "字2": 笔画}},
+        "total_strokes": 总笔画,
         "meaning": "字义解释",
         "source": "出处，如《诗经·XXX》",
         "bazi_match": "与八字的匹配度说明",
+        "numerology": {{
+            "total_strokes_numerology": 总笔画数理,
+            "total_luck": "吉/凶/平",
+            "total_score": 评分(0-100),
+            "total_description": "81数理含义",
+            "total_detail": "81数理详细说明",
+            "char_numerology": [
+                {{
+                    "char": "字1",
+                    "strokes_numerology": 笔画数理,
+                    "luck": "吉/凶/平",
+                    "description": "81数理含义"
+                }},
+                {{
+                    "char": "字2",
+                    "strokes_numerology": 笔画数理,
+                    "luck": "吉/凶/平",
+                    "description": "81数理含义"
+                }}
+            ]
+        }},
         "score": 90
     }}
 ]
 
 评分标准：
-- 符合用神：+30分
-- 符合喜神：+20分
+- 符合用神：+20分
+- 符合喜神：+15分
 - 寓意优美：+20分
 - 平仄和谐：+15分
-- 出自经典：+15分
+- 出自经典：+10分
+- 81数理吉凶：+20分
+
+81数理吉凶评分标准：
+- 81数理为吉：+20分
+- 81数理为平：+10分
+- 81数理为凶：+0分
 
 请只返回JSON数组，不要有其他说明文字。"""
 
@@ -153,7 +179,7 @@ def format_name_suggestions(name_suggestions: List[Dict[str, Any]]) -> str:
     """
     output = []
     output.append("=" * 60)
-    output.append("名字建议")
+    output.append("名字建议（含81数理分析）")
     output.append("=" * 60)
 
     for i, name_info in enumerate(name_suggestions, 1):
@@ -164,6 +190,7 @@ def format_name_suggestions(name_suggestions: List[Dict[str, Any]]) -> str:
         source = name_info.get("source", "")
         bazi_match = name_info.get("bazi_match", "")
         score = name_info.get("score", 0)
+        numerology = name_info.get("numerology", {})
 
         output.append(f"\n{i}. 【{name}】（{pinyin}）- {name_type}")
         output.append(f"   寓意：{meaning}")
@@ -186,7 +213,34 @@ def format_name_suggestions(name_suggestions: List[Dict[str, Any]]) -> str:
         output.append(f"   五行：{wuxing_str}")
         output.append(f"   平仄：{pingze_str}")
         output.append(f"   笔画：{strokes_str}")
-        output.append(f"   评分：{score}/100")
+
+        # 81数理分析
+        if numerology:
+            total_strokes_numerology = numerology.get("total_strokes_numerology", "")
+            total_luck = numerology.get("total_luck", "")
+            total_score = numerology.get("total_score", 0)
+            total_description = numerology.get("total_description", "")
+            total_detail = numerology.get("total_detail", "")
+            char_numerology = numerology.get("char_numerology", [])
+
+            output.append(f"\n   【81数理分析】")
+            output.append(f"   总笔画81数理：{total_strokes_numerology}数")
+            output.append(f"   吉凶：{total_luck}")
+            output.append(f"   评分：{total_score}/100")
+            output.append(f"   含义：{total_description}")
+            output.append(f"   详细说明：{total_detail}")
+
+            # 单字81数理
+            if char_numerology:
+                output.append(f"   单字81数理：")
+                for char_info in char_numerology:
+                    char = char_info.get("char", "")
+                    strokes_num = char_info.get("strokes_numerology", "")
+                    luck = char_info.get("luck", "")
+                    description = char_info.get("description", "")
+                    output.append(f"     {char}字{strokes_num}数：{luck} - {description}")
+
+        output.append(f"   综合评分：{score}/100")
 
     output.append("\n" + "=" * 60)
 

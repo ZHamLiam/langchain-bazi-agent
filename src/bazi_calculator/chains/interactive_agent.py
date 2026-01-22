@@ -204,14 +204,12 @@ class InteractiveBaziNamingAgent:
     def generate_name_suggestions(
         self,
         bazi_result: Dict[str, Any],
-        suitable_chars: Dict[str, Any],
         count: int = 10
     ) -> Dict[str, Any]:
         """生成名字建议（精选版）
 
         Args:
             bazi_result: 八字计算结果
-            suitable_chars: 适合字字典
             count: 生成数量，默认10个
 
         Returns:
@@ -220,7 +218,6 @@ class InteractiveBaziNamingAgent:
         bazi_analysis = analyze_bazi_for_naming.invoke(bazi_result["bazi"])
 
         result = generate_name_suggestions.invoke({
-            "suitable_chars": suitable_chars,
             "bazi_analysis": bazi_analysis,
             "count": count
         })
@@ -416,7 +413,7 @@ class InteractiveBaziNamingAgent:
         else:
             # 精选名字流程
             print("\n正在生成精选名字建议...")
-            name_result = self.generate_name_suggestions(bazi_result, suitable_chars, count=10)
+            name_result = self.generate_name_suggestions(bazi_result, count=10)
             self.display_name_suggestions(name_result)
 
             name_list = [name_info["name"] for name_info in name_result["names"]]

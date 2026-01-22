@@ -8,7 +8,7 @@ from langchain_core.tools import tool
 
 from bazi_calculator.tools.naming.bazi_for_naming import check_name_wuxing_balance
 from bazi_calculator.tools.naming.pingze_analysis import check_pingze_harmony
-from bazi_calculator.tools.naming.stroke_analysis import check_strokes_harmony
+from bazi_calculator.tools.naming.stroke_analysis import check_strokes_comprehensive
 from bazi_calculator.tools.naming.sangcai_wuge import analyze_sancai_wuge
 
 
@@ -24,7 +24,7 @@ def comprehensive_name_analysis(
     整合以下分析：
     - 八字五行匹配度
     - 平仄和谐度
-    - 笔画和谐度
+    - 笔画综合分析（包含和谐度和吉凶）
     - 三才五格吉凶
 
     Args:
@@ -42,8 +42,8 @@ def comprehensive_name_analysis(
     # 平仄分析
     pingze_result = check_pingze_harmony(name)
 
-    # 笔画分析
-    stroke_result = check_strokes_harmony(name)
+    # 笔画综合分析（包含和谐度和吉凶）
+    stroke_result = check_strokes_comprehensive(name)
 
     # 三才五格分析
     sangcai_wuge_result = analyze_sancai_wuge(name, surname)
@@ -109,7 +109,7 @@ def compare_names_comprehensive(
             "evaluation": result["evaluation"],
             "wuxing_score": result["wuxing_analysis"]["score"],
             "pingze_score": result["pingze_analysis"]["score"],
-            "stroke_score": result["stroke_analysis"]["score"],
+            "stroke_score": result["stroke_analysis"]["comprehensive_score"],
             "sangcai_wuge_score": result["sangcai_wuge_analysis"]["overall_score"]
         })
 
@@ -186,7 +186,7 @@ def format_comprehensive_analysis(analysis: Dict[str, Any]) -> str:
     output.append(f"\n【分项评分】")
     output.append(f"八字五行：{wuxing_analysis.get('score', 0)}/100")
     output.append(f"平仄和谐：{pingze_analysis.get('score', 0)}/100")
-    output.append(f"笔画和谐：{stroke_analysis.get('score', 0)}/100")
+    output.append(f"笔画综合：{stroke_analysis.get('comprehensive_score', 0)}/100")
     output.append(f"三才五格：{sangcai_wuge_analysis.get('overall_score', 0)}/100")
 
     output.append(f"\n【详细分析】")
@@ -208,11 +208,14 @@ def format_comprehensive_analysis(analysis: Dict[str, Any]) -> str:
     else:
         output.append(f"   ⚠️  平仄模式一般")
 
-    output.append(f"\n3. 笔画分析")
-    output.append(f"   得分：{stroke_analysis.get('score', 0)}/100")
-    output.append(f"   总笔画：{stroke_analysis.get('total_strokes', 0)}画")
-    output.append(f"   平均笔画：{stroke_analysis.get('average_strokes', 0)}画")
-    output.append(f"   {stroke_analysis.get('description', '')}")
+    output.append(f"\n3. 笔画综合分析")
+    harmony = stroke_analysis.get('harmony', {})
+    luck = stroke_analysis.get('luck', {})
+    output.append(f"   综合得分：{stroke_analysis.get('comprehensive_score', 0)}/100")
+    output.append(f"   和谐得分：{harmony.get('score', 0)}/100 - {harmony.get('description', '')}")
+    output.append(f"   吉凶得分：{luck.get('luck_score', 0)}/100 - {luck.get('luck_description', '')}")
+    output.append(f"   整体吉凶：{luck.get('overall_luck', '')}")
+    output.append(f"   总笔画：{harmony.get('total_strokes', 0)}画")
 
     output.append(f"\n4. 三才五格分析")
     output.append(f"   得分：{sangcai_wuge_analysis.get('overall_score', 0)}/100")
@@ -239,13 +242,13 @@ def _calculate_overall_score(
     权重分配：
     - 八字五行：35%
     - 平仄和谐：25%
-    - 笔画和谐：20%
+    - 笔画综合（和谐+吉凶）：20%
     - 三才五格：20%
 
     Args:
         wuxing_result: 八字五行分析结果
         pingze_result: 平仄分析结果
-        stroke_result: 笔画分析结果
+        stroke_result: 笔画综合分析结果（包含和谐度和吉凶）
         sangcai_wuge_result: 三才五格分析结果
 
     Returns:
@@ -253,7 +256,7 @@ def _calculate_overall_score(
     """
     wuxing_score = wuxing_result.get("score", 0)
     pingze_score = pingze_result.get("score", 0)
-    stroke_score = stroke_result.get("score", 0)
+    stroke_score = stroke_result.get("comprehensive_score", 0)
     sangcai_wuge_score = sangcai_wuge_result.get("overall_score", 0)
 
     overall_score = (
@@ -322,15 +325,25 @@ def _generate_comprehensive_suggestions(
         suggestions.append("平仄模式不是最优组合，可以考虑优化")
 
     # 笔画建议
-    stroke_score = stroke_result.get("score", 0)
-    if stroke_score < 70:
-        total_strokes = stroke_result.get("total_strokes", 0)
-        if total_strokes < 10:
-            suggestions.append("总笔画偏少，建议增加笔画")
-        elif total_strokes > 25:
-            suggestions.append("总笔画偏多，建议减少笔画")
-        else:
-            suggestions.append("笔画搭配有待改进")
+    stroke_comprehensive_score = stroke_result.get("comprehensive_score", 0)
+    harmony = stroke_result.get("harmony", {})
+    luck = stroke_result.get("luck", {})
+
+    if stroke_comprehensive_score < 70:
+        if harmony.get("score", 0) < 70:
+            total_strokes = harmony.get("total_strokes", 0)
+            if total_strokes < 10:
+                suggestions.append("总笔画偏少，建议增加笔画")
+            elif total_strokes > 25:
+                suggestions.append("总笔画偏多，建议减少笔画")
+            else:
+                suggestions.append("笔画搭配有待改进")
+        if luck.get("luck_score", 0) < 70:
+            overall_luck = luck.get("overall_luck", "")
+            if overall_luck == "凶":
+                suggestions.append("笔画数理不吉利，建议调整笔画")
+            else:
+                suggestions.append("笔画数理一般，可以考虑优化")
 
     # 三才五格建议
     sangcai_wuge_score = sangcai_wuge_result.get("overall_score", 0)
@@ -338,8 +351,9 @@ def _generate_comprehensive_suggestions(
         suggestions.append("三才五格不够吉利，可以考虑调整")
 
     # 如果各项都很好
+    stroke_comprehensive_score = stroke_result.get("comprehensive_score", 0)
     if all(score >= 80 for score in [
-        wuxing_score, pingze_score, stroke_score, sangcai_wuge_score
+        wuxing_score, pingze_score, stroke_comprehensive_score, sangcai_wuge_score
     ]):
         suggestions.append("各项分析都很好，这是一个优秀的名字")
 
