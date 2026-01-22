@@ -1,9 +1,10 @@
 """字库生成工具
-
-使用LLM生成汉字字库，包含五行、拼音、康熙笔画、生肖宜忌、平仄、寓意、出处等信息
+ 
+ 使用LLM生成汉字字库，包含五行、拼音、康熙笔画、生肖宜忌、平仄、寓意、出处等信息
 """
 
 import json
+import os
 from typing import Dict, Any, List, Optional
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -36,7 +37,12 @@ def generate_character_library(
     if wuxing_categories is None:
         wuxing_categories = ["木", "火", "土", "金", "水"]
 
-    llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+    llm = ChatOpenAI(
+        model=os.getenv('QWEN_MODEL', 'qwen-flash'),
+        api_key=os.getenv('QWEN_API_KEY'),
+        base_url=os.getenv('QWEN_BASE_URL'),
+        temperature=0.7
+    )
 
     char_library = {}
 

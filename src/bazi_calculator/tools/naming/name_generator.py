@@ -4,6 +4,7 @@
 """
 
 import json
+import os
 from typing import Dict, Any, List, Optional
 from langchain_core.tools import tool
 from langchain_openai import ChatOpenAI
@@ -28,7 +29,13 @@ def generate_name_suggestions(
     Returns:
         名字建议列表
     """
-    llm = ChatOpenAI(model="gpt-4", temperature=0.7)
+
+    llm = ChatOpenAI(
+        model=os.getenv('QWEN_MODEL', 'qwen-flash'),
+        api_key=os.getenv('QWEN_API_KEY'),
+        base_url=os.getenv('QWEN_BASE_URL'),
+        temperature=0.7
+    )
 
     # 提取适合字
     suitable_chars_dict = suitable_chars.get("suitable_chars", {})
@@ -219,7 +226,7 @@ def sort_names_by_score(name_suggestions: List[Dict[str, Any]]) -> List[Dict[str
 @tool
 def get_top_names(
     name_suggestions: List[Dict[str, Any]],
-    top_count: int = 5
+    top_count: int = 15
 ) -> List[Dict[str, Any]]:
     """获取Top N名字
 

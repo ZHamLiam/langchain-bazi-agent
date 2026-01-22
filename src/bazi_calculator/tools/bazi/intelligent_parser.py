@@ -61,6 +61,38 @@ class IntelligentBaziCalculator:
                 "calendar_type": parsed_info.calendar_type,
                 "formatted_time": f"{parsed_info.year}年{parsed_info.month}月{parsed_info.day}日 {parsed_info.hour:02d}时{parsed_info.minute:02d}分"
             },
+            "bazi": {
+                "year": {
+                    "gan": bazi_result["year"]["gan"],
+                    "zhi": bazi_result["year"]["zhi"],
+                    "full": bazi_result["year"]["full"],
+                    "gan_wuxing": bazi_result["year"]["gan_wuxing"],
+                    "zhi_wuxing": bazi_result["year"]["zhi_wuxing"]
+                },
+                "month": {
+                    "gan": bazi_result["month"]["gan"],
+                    "zhi": bazi_result["month"]["zhi"],
+                    "full": bazi_result["month"]["full"],
+                    "gan_wuxing": bazi_result["month"]["gan_wuxing"],
+                    "zhi_wuxing": bazi_result["month"]["zhi_wuxing"],
+                    "jieqi": bazi_result["month"]["jieqi"]
+                },
+                "day": {
+                    "gan": bazi_result["day"]["gan"],
+                    "zhi": bazi_result["day"]["zhi"],
+                    "full": bazi_result["day"]["full"],
+                    "gan_wuxing": bazi_result["day"]["gan_wuxing"],
+                    "zhi_wuxing": bazi_result["day"]["zhi_wuxing"],
+                    "day_master": bazi_result["day"]["gan"]
+                },
+                "hour": {
+                    "gan": bazi_result["hour"]["gan"],
+                    "zhi": bazi_result["hour"]["zhi"],
+                    "full": bazi_result["hour"]["full"],
+                    "gan_wuxing": bazi_result["hour"]["gan_wuxing"],
+                    "zhi_wuxing": bazi_result["hour"]["zhi_wuxing"]
+                }
+            },
             "bazi_result": {
                 "year": {
                     "full": bazi_result["year"]["full"],
@@ -151,7 +183,7 @@ def parse_and_calculate_bazi(user_input: str, llm=None) -> Dict[str, Any]:
             # 获取API配置
             api_key = os.getenv("QWEN_API_KEY") or os.getenv("OPENAI_API_KEY")
             base_url = os.getenv("QWEN_BASE_URL") or os.getenv("OPENAI_BASE_URL")
-            model = os.getenv("QWEN_MODEL", "gpt-3.5-turbo")
+            model = os.getenv("QWEN_MODEL", "qwen-flash")
 
             if not api_key:
                 raise ValueError("未找到API密钥，请配置QWEN_API_KEY或OPENAI_API_KEY")

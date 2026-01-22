@@ -1,8 +1,9 @@
 """八字Agent
-
-整合所有八字计算工具，提供统一接口
+ 
+ 整合所有八字计算工具，提供统一接口
 """
 
+import os
 from datetime import datetime
 from typing import Dict, Any, Optional
 from langchain_openai import ChatOpenAI
@@ -27,9 +28,14 @@ class BaziAgent:
         """初始化八字Agent
 
         Args:
-            llm: 语言模型实例，如果为None则使用默认GPT-4
+            llm: 语言模型实例，如果为None则使用默认Qwen
         """
-        self.llm = llm or ChatOpenAI(model="gpt-4", temperature=0.3)
+        self.llm = llm or ChatOpenAI(
+            model=os.getenv('QWEN_MODEL', 'qwen-flash'),
+            api_key=os.getenv('QWEN_API_KEY'),
+            base_url=os.getenv('QWEN_BASE_URL'),
+            temperature=0.3
+        )
 
     def calculate_bazi(
         self,

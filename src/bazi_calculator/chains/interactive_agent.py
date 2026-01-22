@@ -1,9 +1,10 @@
 """交互式八字取名Agent
 
-整合所有功能，提供完整的交互式八字取名服务
+ 整合所有功能，提供完整的交互式八字取名服务
 """
 
 import json
+import os
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from pathlib import Path
@@ -36,7 +37,12 @@ class InteractiveBaziNamingAgent:
             llm: 语言模型实例
             char_library_path: 字库文件路径
         """
-        self.llm = llm or ChatOpenAI(model="gpt-4", temperature=0.7)
+        self.llm = llm or ChatOpenAI(
+            model=os.getenv('QWEN_MODEL', 'qwen-flash'),
+            api_key=os.getenv('QWEN_API_KEY'),
+            base_url=os.getenv('QWEN_BASE_URL'),
+            temperature=0.7
+        )
         self.bazi_agent = BaziAgent(llm)
         self.char_library_path = char_library_path
         self.char_library = {}
