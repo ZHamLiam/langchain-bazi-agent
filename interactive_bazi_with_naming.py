@@ -3,6 +3,7 @@
 在八字分析完成后，询问用户是否需要取名建议
 """
 
+
 import os
 import sys
 
@@ -189,11 +190,188 @@ def generate_naming_suggestions(bazi, wuxing_analysis, llm):
         return False
 
 
+def analyze_user_name(user_name: str, bazi, wuxing_analysis, llm):
+    """分析用户提供的姓名"""
+
+    print("\n" + "=" * 80)
+    print("正在分析姓名...")
+    print("=" * 80)
+
+    try:
+        # 准备八字分析数据
+        bazi_data = {
+            "zodiac": get_zodiac(bazi.get("birth_info", {}).get("year", 0)),
+            "day_master": bazi["day"]["gan"],
+            "day_master_wuxing": bazi["day"]["gan_wuxing"],
+            "yong_shen": wuxing_analysis["yong_shen_info"]["yong_shen"],
+            "xi_shen": wuxing_analysis["yong_shen_info"]["xi_shen"],
+            "ji_shen": wuxing_analysis["yong_shen_info"]["ji_shen"],
+            "strength": wuxing_analysis["strength"]
+        }
+
+        # 构建prompt
+        prompt = f"""请对以下姓名进行八字分析。
+
+【八字信息】
+- 生肖：{bazi_data['zodiac']}
+- 日主：{bazi_data['day_master']}（{bazi_data['day_master_wuxing']}）
+- 日主强弱：{bazi_data['strength']}
+- 用神：{bazi_data['yong_shen']}
+- 喜神：{bazi_data['xi_shen']}
+- 忌神：{', '.join(bazi_data['ji_shen'])}
+
+【待分析姓名】
+姓名：{user_name}
+
+【分析要求】
+1. 分析每个字的五行属性
+2. 分析每个字的笔画数（康熙字典）
+3. 分析每个字的平仄声调（一声二声为平，三声四声为仄）
+4. 评估姓名与八字的匹配度（是否符合用神、喜神）
+5. 分析姓名的寓意和出处
+6. 给出综合评分（满分100分）
+7. 给出改进建议（如果需要的话）
+
+请严格按照以下JSON格式输出：
+{{
+    "name": "姓名",
+    "pinyin": "pīnyīn",
+    "chars": ["字1", "字2"],
+    "wuxing": {{"字1": "五行", "字2": "五行"}},
+    "strokes": {{"字1": 笔画, "字2": 笔画}},
+    "pingze": {{"字1": "平/仄", "字2": "平/仄"}},
+    "total_strokes": 总笔画,
+    "wuxing_match": "符合用神/喜神/忌神",
+    "meaning": "寓意解释",
+    "source": "出处",
+    "bazi_score": {{
+        "yong_shen_match": 用神匹配分数(0-30),
+        "xi_shen_match": 喜神匹配分数(0-20),
+        "pingze_harmony": 平仄和谐分数(0-15),
+        "meaning_quality": 寓意质量分数(0-20),
+        "strokes_balance": 笔画平衡分数(0-15)
+    }},
+    "total_score": 综合评分(0-100),
+    "analysis": "详细分析说明",
+    "suggestions": ["改进建议1", "改进建议2"]
+}}
+
+评分标准：
+- 符合用神：+30分
+- 符合喜神：+20分
+- 平仄和谐：+15分
+- 寓意质量：+20分
+- 笔画平衡：+15分
+
+请只返回JSON对象，不要有其他说明文字。"""
+
+        # 调用LLM分析
+        response = llm.invoke(prompt)
+        content = response.content
+
+        if isinstance(content, str):
+            content_str = content
+        else:
+            content_str = str(content)
+
+        # 尝试解析JSON
+        import json
+        import re
+        try:
+            analysis_result = json.loads(content_str)
+        except json.JSONDecodeError:
+            json_match = re.search(r'\{.*\}', content_str, re.DOTALL)
+            if json_match:
+                analysis_result = json.loads(json_match.group(0))
+            else:
+                raise ValueError(f"无法解析LLM响应：{content_str}")
+
+        # 格式化输出
+        print("\n" + "-" * 80)
+        print("【姓名分析】")
+        print("-" * 80)
+
+        name = analysis_result.get("name", user_name)
+        pinyin = analysis_result.get("pinyin", "")
+        chars = analysis_result.get("chars", [])
+        wuxing = analysis_result.get("wuxing", {})
+        strokes = analysis_result.get("strokes", {})
+        pingze = analysis_result.get("pingze", {})
+        total_strokes = analysis_result.get("total_strokes", 0)
+        wuxing_match = analysis_result.get("wuxing_match", "")
+        meaning = analysis_result.get("meaning", "")
+        source = analysis_result.get("source", "")
+        total_score = analysis_result.get("total_score", 0)
+        analysis_text = analysis_result.get("analysis", "")
+        suggestions = analysis_result.get("suggestions", [])
+
+        print(f"\n姓名：{name}（{pinyin}）")
+        print(f"总笔画：{total_strokes}画")
+
+        print(f"\n【单字分析】")
+        for char in chars:
+            print(f"  {char}")
+            print(f"    五行：{wuxing.get(char, '')}")
+            print(f"    笔画：{strokes.get(char, '')}画")
+            print(f"    平仄：{pingze.get(char, '')}")
+
+        print(f"\n【八字匹配度】")
+        bazi_score = analysis_result.get("bazi_score", {})
+        print(f"  用神匹配：{bazi_score.get('yong_shen_match', 0)}/30")
+        print(f"  喜神匹配：{bazi_score.get('xi_shen_match', 0)}/20")
+        print(f"  平仄和谐：{bazi_score.get('pingze_harmony', 0)}/15")
+        print(f"  寓意质量：{bazi_score.get('meaning_quality', 0)}/20")
+        print(f"  笔画平衡：{bazi_score.get('strokes_balance', 0)}/15")
+        print(f"\n  综合评分：{total_score}/100")
+
+        print(f"\n【匹配结果】")
+        print(f"  {wuxing_match}")
+
+        print(f"\n【寓意说明】")
+        print(f"  {meaning}")
+
+        if source:
+            print(f"\n【出处】")
+            print(f"  {source}")
+
+        print(f"\n【详细分析】")
+        print(f"  {analysis_text}")
+
+        if suggestions:
+            print(f"\n【改进建议】")
+            for i, suggestion in enumerate(suggestions, 1):
+                print(f"  {i}. {suggestion}")
+
+        # 给出总体评价
+        if total_score >= 80:
+            print(f"\n【总体评价】")
+            print(f"  ✅ 优秀！{name} 与八字匹配度很高，寓意美好，是一个很好的名字。")
+        elif total_score >= 60:
+            print(f"\n【总体评价】")
+            print(f"  ⚠️  良好！{name} 与八字匹配度较好，但还有提升空间。")
+        elif total_score >= 40:
+            print(f"\n【总体评价】")
+            print(f"  ❌ 一般。{name} 与八字匹配度一般，建议考虑改进。")
+        else:
+            print(f"\n【总体评价】")
+            print(f"  ⚠️  较差。{name} 与八字匹配度较低，建议参考改进建议。")
+
+        print("\n" + "-" * 80)
+
+        return True
+
+    except Exception as e:
+        print(f"\n❌ 分析姓名时出错：{e}")
+        import traceback
+        traceback.print_exc()
+        return False
+
+
 def interactive_bazi_with_naming():
     """交互式八字分析和取名"""
 
     print("\n" + "=" * 80)
-    print("八字分析 + 取名建议 交互系统")
+    print("八字分析 + 取名建议 + 姓名分析 交互系统")
     print("=" * 80)
 
     try:
@@ -301,6 +479,20 @@ def interactive_bazi_with_naming():
                         print("\n无效选择，跳过取名建议")
                 else:
                     print("\n跳过取名建议")
+
+                # 询问是否有心仪的姓名需要分析
+                print("\n" + "=" * 80)
+                need_name_analysis = input("是否有心仪的姓名需要分析？(y/n): ").strip().lower()
+
+                if need_name_analysis in ['y', 'yes', '是', 'Y', 'YES']:
+                    user_name = input("\n请输入姓名：").strip()
+                    if user_name:
+                        # 分析用户提供的姓名
+                        analyze_user_name(user_name, bazi, wuxing_analysis, llm)
+                    else:
+                        print("\n姓名不能为空，跳过姓名分析")
+                else:
+                    print("\n跳过姓名分析")
 
                 print("\n" + "=" * 80)
 
